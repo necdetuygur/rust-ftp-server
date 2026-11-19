@@ -1,0 +1,14 @@
+services:
+  ftp:
+    build: .
+    container_name: rust-ftp-server
+    restart: unless-stopped
+    ports:
+      - "2121:2121"
+      - "50000-50100:50000-50100"
+    volumes:
+      # Linux example: replace host paths with directories that exist on your machine.
+      - ./MOV:/data/MOV
+      - ./config.json:/app/config.json:ro
+    environment:
+      - RUST_LOG=info

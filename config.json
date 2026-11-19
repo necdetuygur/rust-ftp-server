@@ -1,0 +1,18 @@
+{
+  "host": "0.0.0.0",
+  "port": 2121,
+  "paths": [
+    {
+      "path": "D:/",
+      "user": "pc",
+      "password": "CHANGE_ME"
+    },
+    {
+      "path": "./MOV",
+      "user": "pc",
+      "password": "CHANGE_ME"
+    }
+  ],
+  "passive_port_start": 50000,
+  "passive_port_end": 50100
+}
