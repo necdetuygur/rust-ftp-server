@@ -31,7 +31,7 @@ echo "Sürüm güncelleniyor: $CURRENT_VERSION -> $NEW_VERSION"
 printf "%s\n" "$NEW_VERSION" > "$RELEASE_FILE"
 
 # Git işlemlerini çalıştır
-git add . && git commit -m "Release" && git push
+git add . && git commit -m "Release $NEW_VERSION" && git push
 git tag "$NEW_VERSION" && git push origin "$NEW_VERSION"
 
 echo "Tamamlandı: $NEW_VERSION yayınlandı."
