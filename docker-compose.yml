@@ -3,12 +3,20 @@ services:
     build: .
     container_name: rust-ftp-server
     restart: unless-stopped
+    # Localhost-only by default. Change to "2121:2121" etc. only on a trusted LAN.
     ports:
-      - "2121:2121"
-      - "50000-50100:50000-50100"
+      - "127.0.0.1:2121:2121"
+      - "127.0.0.1:50000-50100:50000-50100"
     volumes:
-      # Linux example: replace host paths with directories that exist on your machine.
-      - ./MOV:/data/MOV
-      - ./config.json:/app/config.json:ro
+      # ':z' keeps SELinux-enabled Fedora happy with bind mounts.
+      - ./MOV:/data/MOV:z
+      - ./public:/data/public:z
+      - ./config.json:/app/config.json:ro,z
     environment:
-      - RUST_LOG=info
+      RUST_LOG: info
+      FTP_CONFIG: /app/config.json
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/rust-ftp-server", "--check"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

@@ -1,0 +1,2 @@
+public user root (host: ./public, container: /data/public)
+This directory is isolated from the media user's directory.

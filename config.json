@@ -3,16 +3,17 @@
   "port": 2121,
   "paths": [
     {
-      "path": "D:/",
-      "user": "pc",
-      "password": "CHANGE_ME"
+      "path": "/data/MOV",
+      "user": "media",
+      "password": "media-demo-2026"
     },
     {
-      "path": "./MOV",
-      "user": "pc",
-      "password": "CHANGE_ME"
+      "path": "/data/public",
+      "user": "public",
+      "password": "public-demo-2026"
     }
   ],
+  "passive_host": "127.0.0.1",
   "passive_port_start": 50000,
   "passive_port_end": 50100
 }

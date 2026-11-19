@@ -1,109 +1,117 @@
-# Rust FTP Server — starter repository
+# Rust FTP Server
 
-This repository contains the Rust project scaffold, Docker files, sample JSON config,
-and a GitHub Actions release matrix for Windows, Linux and macOS.
+`config.json` ile yönetilen, **kullanıcı başına ayrı kök dizini** olan çalışan bir FTP sunucusu.
+[libunftp](https://docs.rs/libunftp) + `unftp-sbe-fs` kullanır.
 
-## Important implementation status
+## Neler düzeltildi?
 
-**This is a build/release scaffold, not a finished FTP server.** The current `main.rs`
-validates the config and intentionally exits without opening an FTP listener. It does
-not yet authenticate users or transfer files.
+- Eskiden `main.rs` sadece config doğrulayıp çıkıyordu; artık gerçekten dinleyici açıyor.
+- Çoklu kullanıcı desteği eklendi. Her kullanıcı kendi dizinine hapsedilir:
+  `UserDetail::home()` + `Filesystem::enter()` mekanizması kullanılır.
+- Config yolu artık esnek: `--config`, `FTP_CONFIG` ortam değişkeni, çalışma dizini,
+  executable yanı sırasıyla denenir (Docker'da `/app/config.json` bulunur).
+- Docker imajı ayrıcalıksız kullanıcı (UID 1000) ile çalışır, Fedora/SELinux için `:z`
+  montajları ve healthcheck vardır.
+- Portlar varsayılan olarak sadece `127.0.0.1`'e bağlanır.
 
-That fail-closed behavior is intentional: the requested configuration maps multiple
-independent host directories to FTP logins. A correct implementation needs a
-per-user identity/home-directory provider and rooted filesystem backend. Simply using
-one shared filesystem backend would risk exposing one user's files to another user.
-The scaffold must not be presented as a working FTP service until that adapter is
-implemented and tested.
+## Hızlı başlangıç (Fedora + Docker)
 
-The dependency selected for the eventual FTP protocol layer is
-[`libunftp`](https://docs.rs/libunftp/), a Rust FTP/FTPS server library.
+```bash
+cd ~/Downloads/rust-ftp-server
+docker compose build
+docker compose up -d
+docker compose ps          # healthy olmalı
+docker compose logs -f ftp # CTRL+C ile çık
+```
 
-## Config
+Örnek hesaplar:
 
-`config.json` is loaded from the same directory as the executable.
+| Kullanıcı | Şifre               | Salt gezinen dizin | Host dizini |
+|-----------|---------------------|--------------------|-------------|
+| `media`   | `media-demo-2026`   | `/data/MOV`        | `./MOV`     |
+| `public`  | `public-demo-2026`  | `/data/public`     | `./public`  |
+
+Bağlantı (passive mod varsayılandır):
+
+```bash
+ftp localhost 2121
+# veya
+lftp -p 2121 -u media,media-demo-2026 localhost
+```
+
+Python ile hızlı doğrulama:
+
+```bash
+python3 - <<'PY'
+from ftplib import FTP
+f = FTP(); f.connect('127.0.0.1', 2121); f.login('media', 'media-demo-2026')
+print(f.pwd(), f.nlst())
+f.storbinary('STOR deneme.txt', b'merhaba\n')
+print(f.retrbinary('RETR deneme.txt', print))
+f.delete('deneme.txt'); f.quit()
+PY
+```
+
+## Yapılandırma (`config.json`)
 
 ```json
 {
   "host": "0.0.0.0",
   "port": 2121,
+  "passive_host": "127.0.0.1",
   "paths": [
-    {
-      "path": "D:/",
-      "user": "pc",
-      "password": "CHANGE_ME"
-    },
-    {
-      "path": "./MOV",
-      "user": "media",
-      "password": "CHANGE_ME_TOO"
-    }
+    { "path": "/data/MOV",    "user": "media",  "password": "media-demo-2026" },
+    { "path": "/data/public", "user": "public", "password": "public-demo-2026" }
   ],
   "passive_port_start": 50000,
   "passive_port_end": 50100
 }
 ```
 
-The extra passive port range is needed for FTP data connections and Docker port mapping.
-Use distinct usernames for distinct roots. The sample credentials are placeholders;
-do not expose FTP with weak passwords.
+| Alan | Açıklama |
+|------|----------|
+| `host`, `port` | Dinlenecek adres. Konteyner içinde `0.0.0.0` olmalı. |
+| `paths[].path` | Kullanıcının kök dizini. Başlatma sırasında var olmalı. |
+| `paths[].user` | Benzersiz kullanıcı adı. |
+| `paths[].password` | Düz metin şifre; değiştirin. |
+| `passive_host` | PASV yanıtında bildirilen adres. Docker/NAT için `127.0.0.1`; LAN'dan bağlanacaksanız makinenin IP'sini yazın veya alanı silin (bağlantı IP'si kullanılır). |
+| `passive_port_start/end` | Veri bağlantıları için port aralığı; compose dosyasında aynı aralık publish edilir. |
 
-## Build locally
+Doğrulama modu (sunucuyu başlatmadan config'i kontrol eder):
 
-Install Rust 1.85+ and run:
+```bash
+docker compose exec ftp rust-ftp-server --check
+# veya konteyner dışında: cargo run -- --check
+```
+
+## Yerel derleme
+
+Rust 1.85+ gerekir (edition 2024):
 
 ```bash
 cargo build --release
+./target/release/rust-ftp-server --config ./config.json --check
+./target/release/rust-ftp-server --config ./config.json
 ```
 
-The executable is written to `target/release/` (or `target/release/` with `.exe` on Windows).
+## Güvenlik notları
 
-## Docker
+- Düz FTP şifreleri ve veriyi şifrelemez. Şu an FTPS kapalı; sadece localhost veya güvenilir LAN kullanın.
+- compose portları `127.0.0.1` ile sınırlar. Dışarı açmak için bilinçli olarak `2121:2121` yapın ve mutlaka FTPS ekleyin.
+- Örnek şifreleri değiştirin. Yeni kullanıcı/dizin eklediğinizde compose'a ilgili volume satırını da ekleyin.
+- Kullanıcı dizinleri `/` (filesystem root) olamaz; sunucu bunu reddeder.
+- Her oturumun depolama kökü girişten sonra kullanıcının dizinine daraltılır, böylece kullanıcılar birbirinin dosyalarını göremez.
+
+## Sorun giderme
+
+Bu makinede varsayılan buildx sürücüsü (`kiri-build`) hata veriyorsa
+(`no valid drivers found: unable to parse docker host 'kiri'`), derlemeyi şöyle tetikleyin:
 
 ```bash
-docker compose build
-docker compose up -d
+BUILDX_BUILDER=default docker compose build
 ```
 
-Update the volume mappings and paths in `config.json` for the host OS first.
-The sample compose file maps `./MOV` to `/data/MOV`; use `/data/MOV` in the
-container config, not a Windows drive path.
+## Yayın workflow'u
 
-## GitHub Releases
-
-Push the project to a GitHub repository, then create and push a version tag:
-
-```bash
-git tag v0.1.0
-git push origin v0.1.0
-```
-
-The workflow builds:
-- Windows x86_64
-- Linux x86_64
-- macOS Apple Silicon (aarch64)
-- macOS Intel (x86_64)
-
-It packages each executable together with `config.json`. A GitHub Actions run is
-required to produce those platform-specific binaries; this workspace cannot create
-native release artifacts for all three operating systems.
-
-## Security notes
-
-- Plain FTP sends credentials and data without encryption. Use a trusted private LAN
-  or implement FTPS before exposing it to the public internet.
-- Restrict the passive port range in the firewall and publish the same range in Docker.
-- Use strong, unique passwords.
-- Run the server as an unprivileged OS user.
-- Never mount a broad host filesystem root into a container unless that access is intended.
-
----
-
-```sh
-git add .
-git commit -m "Update release workflow"
-git push
-
-git tag v0.1.2
-git push origin v0.1.2
-```
+`v*` tag'i gönderildiğinde `.github/workflows/release.yml` Windows, Linux ve macOS
+(x86_64 + aarch64) için ikili dosyaları `config.json` ile birlikte paketler.
