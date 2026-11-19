@@ -115,3 +115,14 @@ BUILDX_BUILDER=default docker compose build
 
 `v*` tag'i gönderildiğinde `.github/workflows/release.yml` Windows, Linux ve macOS
 (x86_64 + aarch64) için ikili dosyaları `config.json` ile birlikte paketler.
+
+---
+
+```sh
+git add .
+git commit -m "Update release workflow"
+git push
+
+git tag v0.1.1
+git push origin v0.1.1
+```
