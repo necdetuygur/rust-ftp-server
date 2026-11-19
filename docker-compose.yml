@@ -1,0 +1,22 @@
+services:
+  ftp:
+    build: .
+    container_name: rust-ftp-server
+    restart: unless-stopped
+    # Loopback by default. Change all three host settings together to serve a LAN.
+    ports:
+      - "127.0.0.1:2121:2121"
+      - "127.0.0.1:50000-50100:50000-50100"
+    volumes:
+      - ./data/media:/app/data/media
+      - ./data/public:/app/data/public
+      - ./config.json:/app/config.json:ro
+    environment:
+      RUST_LOG: info
+      FTP_CONFIG: /app/config.json
+      FTP_PASSIVE_HOST: 127.0.0.1
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/rust-ftp-server", "--check"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

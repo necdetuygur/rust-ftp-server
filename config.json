@@ -1,0 +1,18 @@
+{
+  "host": "0.0.0.0",
+  "port": 2121,
+  "paths": [
+    {
+      "path": "./data/media",
+      "user": "CHANGE_ME_USER",
+      "password": "CHANGE_ME_PASSWORD"
+    },
+    {
+      "path": "./data/public",
+      "user": "CHANGE_ME_USER_2",
+      "password": "CHANGE_ME_PASSWORD_2"
+    }
+  ],
+  "passive_port_start": 50000,
+  "passive_port_end": 50100
+}

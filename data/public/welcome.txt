@@ -1,0 +1,2 @@
+This is the "public" user's FTP root.
+Each configured user is confined to their own directory.

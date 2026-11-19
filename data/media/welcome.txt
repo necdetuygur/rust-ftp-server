@@ -1,0 +1,2 @@
+This is the "media" user's FTP root.
+Replace this file with your own files, or add more users in config.json.
