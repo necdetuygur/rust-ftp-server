@@ -96,3 +96,14 @@ native release artifacts for all three operating systems.
 - Use strong, unique passwords.
 - Run the server as an unprivileged OS user.
 - Never mount a broad host filesystem root into a container unless that access is intended.
+
+---
+
+```sh
+git add .
+git commit -m "Update release workflow"
+git push
+
+git tag v0.1.1
+git push origin v0.1.1
+```
